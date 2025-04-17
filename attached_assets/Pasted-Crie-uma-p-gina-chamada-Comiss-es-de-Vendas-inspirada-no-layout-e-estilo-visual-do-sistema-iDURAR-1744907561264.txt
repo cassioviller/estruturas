@@ -1,0 +1,48 @@
+Crie uma página chamada "Comissões de Vendas", inspirada no layout e estilo visual do sistema iDURAR CRM/ERP, com os seguintes elementos e funcionalidades:
+
+🎯 Objetivo
+Gerenciar comissões de vendas de forma visual e dinâmica, com uma tabela interativa e dois gráficos circulares que mostram o desempenho das comissões e recebimentos. A página deve permitir adicionar novas linhas com dados de propostas de vendas.
+
+🧾 Estrutura da Tabela
+Crie uma tabela principal com as seguintes colunas:
+
+
+Campo	Tipo de dado	Descrição
+Proposta	Texto	Identificação da proposta (ex: "264.24 – Orlando").
+Valor Total	Número (R$)	Valor total da proposta de venda.
+Valor Pago	Número (R$)	Quanto o cliente já pagou.
+Saldo Aberto	Cálculo	Valor Total - Valor Pago.
+% Comissão	Número editável (%)	Percentual de comissão negociado.
+Valor Comissão Total	Cálculo	Valor Total * (% Comissão / 100).
+Valor Comissão Paga	Número (R$)	Valor já pago de comissão.
+% Comissão Paga	Cálculo	Valor Comissão Paga / Valor Comissão Total * 100.
+➕ Botão “Adicionar Nova Proposta”
+Adicione um botão azul com o texto Adicionar Nova Proposta, posicionado acima ou abaixo da tabela. Ao clicar, ele deve permitir preencher os campos da nova linha manualmente (com inputs inline ou modal).
+
+📊 Gráficos Laterais (Estilo Rosca / Circular)
+Crie dois gráficos de progresso circulares, posicionados ao lado direito da tabela:
+
+1. Recebido vs Total
+Título: Recebido vs Total
+
+Cálculo: (Soma dos Valores Pagos / Soma dos Valores Totais) * 100
+
+2. Comissão Paga vs Total
+Título: Comissão Paga vs Total
+
+Cálculo: (Soma das Comissões Pagas / Soma das Comissões Totais) * 100
+
+Ambos os gráficos devem se atualizar automaticamente conforme os dados da tabela mudam.
+
+🎨 Estilo Visual
+Layout branco, limpo e profissional.
+
+Menu lateral (como no iDURAR CRM) pode ser incluído, mas o foco está na página de comissões.
+
+Tabela responsiva, com bordas suaves.
+
+Gráficos coloridos (ex: verde e azul).
+
+Tipografia clara e moderna.
+
+O botão "Adicionar Nova Proposta" deve ter destaque (cor azul ou verde).
