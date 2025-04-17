@@ -19,21 +19,17 @@ export default function AddProposalModal({ isOpen, onClose }: AddProposalModalPr
   
   const [formData, setFormData] = useState<InsertProposal>({
     proposta: "",
-    valorTotal: 0,
-    valorPago: 0,
-    percentComissao: 0,
-    valorComissaoPaga: 0
+    valorTotal: "",
+    valorPago: "",
+    percentComissao: "",
+    valorComissaoPaga: ""
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Convert string values to numbers for numeric fields
-    const numericFields = ['valorTotal', 'valorPago', 'percentComissao', 'valorComissaoPaga'];
-    const parsedValue = numericFields.includes(name) ? parseFloat(value) : value;
-    
     setFormData(prev => ({
       ...prev,
-      [name]: parsedValue
+      [name]: value
     }));
   };
 
@@ -52,10 +48,11 @@ export default function AddProposalModal({ isOpen, onClose }: AddProposalModalPr
       resetForm();
       onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Erro ao adicionar proposta:", error);
       toast({
         title: "Erro",
-        description: `Não foi possível adicionar a proposta: ${error.message}`,
+        description: `Não foi possível adicionar a proposta: ${error.message || 'Verifique os dados informados'}`,
         variant: "destructive",
       });
     }
@@ -64,10 +61,10 @@ export default function AddProposalModal({ isOpen, onClose }: AddProposalModalPr
   const resetForm = () => {
     setFormData({
       proposta: "",
-      valorTotal: 0,
-      valorPago: 0,
-      percentComissao: 0,
-      valorComissaoPaga: 0
+      valorTotal: "",
+      valorPago: "",
+      percentComissao: "",
+      valorComissaoPaga: ""
     });
   };
 
@@ -107,7 +104,7 @@ export default function AddProposalModal({ isOpen, onClose }: AddProposalModalPr
                   step="0.01"
                   min="0"
                   placeholder="0,00"
-                  value={formData.valorTotal || ""}
+                  value={formData.valorTotal}
                   onChange={handleChange}
                   required
                 />
@@ -122,7 +119,7 @@ export default function AddProposalModal({ isOpen, onClose }: AddProposalModalPr
                   step="0.01"
                   min="0"
                   placeholder="0,00"
-                  value={formData.valorPago || ""}
+                  value={formData.valorPago}
                   onChange={handleChange}
                   required
                 />
@@ -138,7 +135,7 @@ export default function AddProposalModal({ isOpen, onClose }: AddProposalModalPr
                   min="0"
                   max="100"
                   placeholder="0"
-                  value={formData.percentComissao || ""}
+                  value={formData.percentComissao}
                   onChange={handleChange}
                   required
                 />
@@ -153,7 +150,7 @@ export default function AddProposalModal({ isOpen, onClose }: AddProposalModalPr
                   step="0.01"
                   min="0"
                   placeholder="0,00"
-                  value={formData.valorComissaoPaga || ""}
+                  value={formData.valorComissaoPaga}
                   onChange={handleChange}
                   required
                 />
