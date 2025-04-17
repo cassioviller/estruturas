@@ -22,7 +22,7 @@ export const salesProposals = pgTable("sales_proposals", {
   valorComissaoPaga: numeric("valor_comissao_paga", { precision: 10, scale: 2 }).notNull(),
 });
 
-// Custom zod schema for insert proposal that matches the in-memory storage (using strings for numbers)
+// For frontend use: we still accept strings for the form input
 export const insertProposalSchema = z.object({
   proposta: z.string(),
   valorTotal: z.string(),
@@ -31,7 +31,7 @@ export const insertProposalSchema = z.object({
   valorComissaoPaga: z.string(),
 });
 
-// Create a custom validation schema for updates
+// Create a custom validation schema for updates - using numbers as database expects them
 export const updateProposalSchema = z.object({
   proposta: z.string().optional(),
   valorTotal: z.number().nonnegative().optional(),

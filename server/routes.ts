@@ -3,14 +3,22 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProposalSchema, updateProposalSchema } from "@shared/schema";
 import { ZodError } from "zod";
+import { DatabaseStorage } from "./storage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize database with sample data if needed
+  if (storage instanceof DatabaseStorage) {
+    await storage.seedInitialData();
+    console.log("Database initialized with sample data if needed");
+  }
+  
   // Get all proposals
   app.get("/api/proposals", async (_req, res) => {
     try {
       const proposals = await storage.getAllProposals();
       res.json(proposals);
     } catch (error) {
+      console.error('Error fetching proposals:', error);
       res.status(500).json({ message: "Failed to fetch proposals" });
     }
   });
@@ -30,6 +38,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(proposal);
     } catch (error) {
+      console.error('Error fetching proposal:', error);
       res.status(500).json({ message: "Failed to fetch proposal" });
     }
   });
@@ -47,6 +56,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errors: error.errors 
         });
       }
+      console.error('Error creating proposal:', error);
       res.status(500).json({ message: "Failed to create proposal" });
     }
   });
@@ -96,6 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(204).end();
     } catch (error) {
+      console.error('Error deleting proposal:', error);
       res.status(500).json({ message: "Failed to delete proposal" });
     }
   });

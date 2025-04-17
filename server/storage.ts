@@ -1,4 +1,6 @@
 import { salesProposals, type SalesProposal, type InsertProposal, type UpdateProposal, type User, type InsertUser, users } from "@shared/schema";
+import { db } from "./db";
+import { eq, sql } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -13,133 +15,135 @@ export interface IStorage {
   deleteProposal(id: number): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private proposals: Map<number, SalesProposal>;
-  private userCurrentId: number;
-  private proposalCurrentId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.proposals = new Map();
-    this.userCurrentId = 1;
-    this.proposalCurrentId = 1;
-    
-    // Initialize with sample data
-    this.initializeSampleProposals();
-  }
-
-  private initializeSampleProposals() {
-    const sampleProposals: InsertProposal[] = [
-      {
-        proposta: "264.24 – Orlando",
-        valorTotal: "24500",
-        valorPago: "12250",
-        percentComissao: "10",
-        valorComissaoPaga: "1225"
-      },
-      {
-        proposta: "192.18 – Maria Alice",
-        valorTotal: "18750",
-        valorPago: "18750",
-        percentComissao: "12",
-        valorComissaoPaga: "2250"
-      },
-      {
-        proposta: "305.32 – Pedro Souza",
-        valorTotal: "42800",
-        valorPago: "21400",
-        percentComissao: "15",
-        valorComissaoPaga: "3210"
-      },
-      {
-        proposta: "178.09 – Alexandre Lima",
-        valorTotal: "15300",
-        valorPago: "0",
-        percentComissao: "8",
-        valorComissaoPaga: "0"
-      }
-    ];
-
-    sampleProposals.forEach(proposal => {
-      this.createProposal(proposal);
-    });
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userCurrentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   async getAllProposals(): Promise<SalesProposal[]> {
-    return Array.from(this.proposals.values());
+    return await db.select().from(salesProposals);
   }
 
   async getProposal(id: number): Promise<SalesProposal | undefined> {
-    return this.proposals.get(id);
+    const [proposal] = await db.select().from(salesProposals).where(eq(salesProposals.id, id));
+    return proposal || undefined;
   }
 
   async createProposal(insertProposal: InsertProposal): Promise<SalesProposal> {
-    const id = this.proposalCurrentId++;
-    const proposal: SalesProposal = { ...insertProposal, id };
-    this.proposals.set(id, proposal);
+    // Convert from string to numeric for database storage
+    const dbProposal = {
+      proposta: insertProposal.proposta,
+      valorTotal: insertProposal.valorTotal,
+      valorPago: insertProposal.valorPago,
+      percentComissao: insertProposal.percentComissao,
+      valorComissaoPaga: insertProposal.valorComissaoPaga
+    };
+
+    const [proposal] = await db
+      .insert(salesProposals)
+      .values(dbProposal)
+      .returning();
+    
     return proposal;
   }
 
   async updateProposal(id: number, updateData: Partial<UpdateProposal>): Promise<SalesProposal | undefined> {
-    const existingProposal = this.proposals.get(id);
-    
-    if (!existingProposal) {
-      return undefined;
-    }
-    
-    // Convert numeric values to strings for storage consistency
-    const processedUpdateData: Partial<InsertProposal> = {};
+    // Convert numeric values to strings for database compatibility
+    const dbUpdateData: Record<string, any> = {};
     
     if (updateData.proposta !== undefined) {
-      processedUpdateData.proposta = updateData.proposta;
+      dbUpdateData.proposta = updateData.proposta;
     }
     
     if (updateData.valorTotal !== undefined) {
-      processedUpdateData.valorTotal = String(updateData.valorTotal);
+      dbUpdateData.valorTotal = updateData.valorTotal.toString();
     }
     
     if (updateData.valorPago !== undefined) {
-      processedUpdateData.valorPago = String(updateData.valorPago);
+      dbUpdateData.valorPago = updateData.valorPago.toString();
     }
     
     if (updateData.percentComissao !== undefined) {
-      processedUpdateData.percentComissao = String(updateData.percentComissao);
+      dbUpdateData.percentComissao = updateData.percentComissao.toString();
     }
     
     if (updateData.valorComissaoPaga !== undefined) {
-      processedUpdateData.valorComissaoPaga = String(updateData.valorComissaoPaga);
+      dbUpdateData.valorComissaoPaga = updateData.valorComissaoPaga.toString();
     }
     
-    const updatedProposal: SalesProposal = {
-      ...existingProposal,
-      ...processedUpdateData
-    };
+    const [updatedProposal] = await db
+      .update(salesProposals)
+      .set(dbUpdateData)
+      .where(eq(salesProposals.id, id))
+      .returning();
     
-    this.proposals.set(id, updatedProposal);
     return updatedProposal;
   }
 
   async deleteProposal(id: number): Promise<boolean> {
-    return this.proposals.delete(id);
+    const result = await db
+      .delete(salesProposals)
+      .where(eq(salesProposals.id, id))
+      .returning({ id: salesProposals.id });
+    
+    return result.length > 0;
+  }
+
+  // Helper method to seed the database with initial data if needed
+  async seedInitialData(): Promise<void> {
+    const result = await db.select({ 
+      count: sql<number>`COUNT(*)` 
+    }).from(salesProposals);
+    
+    if (result[0].count === 0) {
+      const sampleProposals = [
+        {
+          proposta: "264.24 – Orlando",
+          valorTotal: "24500",
+          valorPago: "12250",
+          percentComissao: "10",
+          valorComissaoPaga: "1225"
+        },
+        {
+          proposta: "192.18 – Maria Alice",
+          valorTotal: "18750",
+          valorPago: "18750",
+          percentComissao: "12",
+          valorComissaoPaga: "2250"
+        },
+        {
+          proposta: "305.32 – Pedro Souza",
+          valorTotal: "42800",
+          valorPago: "21400",
+          percentComissao: "15",
+          valorComissaoPaga: "3210"
+        },
+        {
+          proposta: "178.09 – Alexandre Lima",
+          valorTotal: "15300",
+          valorPago: "0",
+          percentComissao: "8",
+          valorComissaoPaga: "0"
+        }
+      ];
+
+      await db.insert(salesProposals).values(sampleProposals);
+    }
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
