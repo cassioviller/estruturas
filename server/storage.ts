@@ -1,4 +1,4 @@
-import { salesProposals, type SalesProposal, type InsertProposal, type User, type InsertUser, users } from "@shared/schema";
+import { salesProposals, type SalesProposal, type InsertProposal, type UpdateProposal, type User, type InsertUser, users } from "@shared/schema";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -9,7 +9,7 @@ export interface IStorage {
   getAllProposals(): Promise<SalesProposal[]>;
   getProposal(id: number): Promise<SalesProposal | undefined>;
   createProposal(proposal: InsertProposal): Promise<SalesProposal>;
-  updateProposal(id: number, proposal: Partial<InsertProposal>): Promise<SalesProposal | undefined>;
+  updateProposal(id: number, proposal: Partial<UpdateProposal>): Promise<SalesProposal | undefined>;
   deleteProposal(id: number): Promise<boolean>;
 }
 
@@ -33,31 +33,31 @@ export class MemStorage implements IStorage {
     const sampleProposals: InsertProposal[] = [
       {
         proposta: "264.24 – Orlando",
-        valorTotal: 24500,
-        valorPago: 12250,
-        percentComissao: 10,
-        valorComissaoPaga: 1225
+        valorTotal: "24500",
+        valorPago: "12250",
+        percentComissao: "10",
+        valorComissaoPaga: "1225"
       },
       {
         proposta: "192.18 – Maria Alice",
-        valorTotal: 18750,
-        valorPago: 18750,
-        percentComissao: 12,
-        valorComissaoPaga: 2250
+        valorTotal: "18750",
+        valorPago: "18750",
+        percentComissao: "12",
+        valorComissaoPaga: "2250"
       },
       {
         proposta: "305.32 – Pedro Souza",
-        valorTotal: 42800,
-        valorPago: 21400,
-        percentComissao: 15,
-        valorComissaoPaga: 3210
+        valorTotal: "42800",
+        valorPago: "21400",
+        percentComissao: "15",
+        valorComissaoPaga: "3210"
       },
       {
         proposta: "178.09 – Alexandre Lima",
-        valorTotal: 15300,
-        valorPago: 0,
-        percentComissao: 8,
-        valorComissaoPaga: 0
+        valorTotal: "15300",
+        valorPago: "0",
+        percentComissao: "8",
+        valorComissaoPaga: "0"
       }
     ];
 
@@ -98,16 +98,39 @@ export class MemStorage implements IStorage {
     return proposal;
   }
 
-  async updateProposal(id: number, updateData: Partial<InsertProposal>): Promise<SalesProposal | undefined> {
+  async updateProposal(id: number, updateData: Partial<UpdateProposal>): Promise<SalesProposal | undefined> {
     const existingProposal = this.proposals.get(id);
     
     if (!existingProposal) {
       return undefined;
     }
     
+    // Convert numeric values to strings for storage consistency
+    const processedUpdateData: Partial<InsertProposal> = {};
+    
+    if (updateData.proposta !== undefined) {
+      processedUpdateData.proposta = updateData.proposta;
+    }
+    
+    if (updateData.valorTotal !== undefined) {
+      processedUpdateData.valorTotal = String(updateData.valorTotal);
+    }
+    
+    if (updateData.valorPago !== undefined) {
+      processedUpdateData.valorPago = String(updateData.valorPago);
+    }
+    
+    if (updateData.percentComissao !== undefined) {
+      processedUpdateData.percentComissao = String(updateData.percentComissao);
+    }
+    
+    if (updateData.valorComissaoPaga !== undefined) {
+      processedUpdateData.valorComissaoPaga = String(updateData.valorComissaoPaga);
+    }
+    
     const updatedProposal: SalesProposal = {
       ...existingProposal,
-      ...updateData
+      ...processedUpdateData
     };
     
     this.proposals.set(id, updatedProposal);

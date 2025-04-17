@@ -22,12 +22,22 @@ export const salesProposals = pgTable("sales_proposals", {
   valorComissaoPaga: numeric("valor_comissao_paga", { precision: 10, scale: 2 }).notNull(),
 });
 
-export const insertProposalSchema = createInsertSchema(salesProposals).pick({
-  proposta: true,
-  valorTotal: true,
-  valorPago: true,
-  percentComissao: true,
-  valorComissaoPaga: true,
+// Custom zod schema for insert proposal that matches the in-memory storage (using strings for numbers)
+export const insertProposalSchema = z.object({
+  proposta: z.string(),
+  valorTotal: z.string(),
+  valorPago: z.string(),
+  percentComissao: z.string(),
+  valorComissaoPaga: z.string(),
+});
+
+// Create a custom validation schema for updates
+export const updateProposalSchema = z.object({
+  proposta: z.string().optional(),
+  valorTotal: z.number().nonnegative().optional(),
+  valorPago: z.number().nonnegative().optional(),
+  percentComissao: z.number().min(0).max(100).optional(),
+  valorComissaoPaga: z.number().nonnegative().optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -35,6 +45,7 @@ export type User = typeof users.$inferSelect;
 
 export type InsertProposal = z.infer<typeof insertProposalSchema>;
 export type SalesProposal = typeof salesProposals.$inferSelect;
+export type UpdateProposal = z.infer<typeof updateProposalSchema>;
 
 // Extended proposal type with calculated fields for frontend use
 export interface ProposalWithCalculations extends SalesProposal {

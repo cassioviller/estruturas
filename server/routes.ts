@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProposalSchema } from "@shared/schema";
+import { insertProposalSchema, updateProposalSchema } from "@shared/schema";
 import { ZodError } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -59,7 +59,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid ID format" });
       }
 
-      const validatedData = insertProposalSchema.partial().parse(req.body);
+      // Use the custom update schema that handles numbers properly
+      const validatedData = updateProposalSchema.parse(req.body);
       const updatedProposal = await storage.updateProposal(id, validatedData);
       
       if (!updatedProposal) {
@@ -69,11 +70,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedProposal);
     } catch (error) {
       if (error instanceof ZodError) {
+        console.error('Validation error:', error.errors);
         return res.status(400).json({ 
           message: "Invalid proposal data", 
           errors: error.errors 
         });
       }
+      console.error('Update error:', error);
       res.status(500).json({ message: "Failed to update proposal" });
     }
   });

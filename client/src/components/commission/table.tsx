@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatIntegerPercentage } from "@/lib/utils/format";
+import { formatCurrency, formatIntegerPercentage, parseCurrencyToNumber } from "@/lib/utils/format";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -45,24 +45,24 @@ export default function CommissionTable({ proposals, isLoading }: CommissionTabl
   const totalComissaoPaga = localProposals.reduce((sum, proposal) => sum + Number(proposal.valorComissaoPaga), 0);
   const percentComissaoPaga = totalComissao > 0 ? (totalComissaoPaga / totalComissao) * 100 : 0;
   
-  // Update commission percentage mutation
-  const updateCommissionMutation = useMutation({
-    mutationFn: async ({ id, percentComissao }: { id: number, percentComissao: number }) => {
-      const response = await apiRequest("PATCH", `/api/proposals/${id}`, { percentComissao });
+  // Update field mutation
+  const updateProposalMutation = useMutation({
+    mutationFn: async ({ id, field, value }: { id: number, field: string, value: number }) => {
+      const response = await apiRequest("PATCH", `/api/proposals/${id}`, { [field]: value });
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/proposals'] });
       toast({
-        title: "Comissão atualizada",
-        description: "O percentual de comissão foi atualizado com sucesso.",
+        title: "Proposta atualizada",
+        description: "O valor foi atualizado com sucesso.",
         variant: "default",
       });
     },
     onError: (error) => {
       toast({
         title: "Erro",
-        description: `Não foi possível atualizar a comissão: ${error.message}`,
+        description: `Não foi possível atualizar o valor: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -91,33 +91,41 @@ export default function CommissionTable({ proposals, isLoading }: CommissionTabl
     }
   });
   
-  // Handle commission percentage change
-  const handlePercentChange = (id: number, value: string) => {
+  // Handle field value change
+  const handleFieldChange = (id: number, field: string, value: string) => {
     const numValue = parseFloat(value);
     
-    if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
+    if (!isNaN(numValue) && numValue >= 0) {
       // Update locally first for immediate feedback
       setLocalProposals(prev => 
         prev.map(proposal => {
           if (proposal.id === id) {
-            const valorComissaoTotal = Number(proposal.valorTotal) * (numValue / 100);
-            const percentComissaoPaga = valorComissaoTotal > 0 
-              ? (Number(proposal.valorComissaoPaga) / valorComissaoTotal) * 100
-              : 0;
+            const updatedProposal = { ...proposal, [field]: numValue };
             
-            return {
-              ...proposal,
-              percentComissao: numValue,
-              valorComissaoTotal,
-              percentComissaoPaga
-            };
+            // Recalculate derived fields
+            if (field === 'valorTotal' || field === 'valorPago') {
+              updatedProposal.saldoAberto = Number(updatedProposal.valorTotal) - Number(updatedProposal.valorPago);
+            }
+            
+            if (field === 'valorTotal' || field === 'percentComissao') {
+              updatedProposal.valorComissaoTotal = Number(updatedProposal.valorTotal) * (Number(updatedProposal.percentComissao) / 100);
+            }
+            
+            if (field === 'valorTotal' || field === 'percentComissao' || field === 'valorComissaoPaga') {
+              const valorComissaoTotal = Number(updatedProposal.valorTotal) * (Number(updatedProposal.percentComissao) / 100);
+              updatedProposal.percentComissaoPaga = valorComissaoTotal > 0 
+                ? (Number(updatedProposal.valorComissaoPaga) / valorComissaoTotal) * 100
+                : 0;
+            }
+            
+            return updatedProposal;
           }
           return proposal;
         })
       );
       
       // Then update on the server
-      updateCommissionMutation.mutate({ id, percentComissao: numValue });
+      updateProposalMutation.mutate({ id, field, value: numValue });
     }
   };
   
@@ -165,21 +173,49 @@ export default function CommissionTable({ proposals, isLoading }: CommissionTabl
               localProposals.map((proposal) => (
                 <TableRow key={proposal.id}>
                   <TableCell className="font-medium text-sm">{proposal.proposta}</TableCell>
-                  <TableCell className="text-sm">{formatCurrency(Number(proposal.valorTotal))}</TableCell>
-                  <TableCell className="text-sm">{formatCurrency(Number(proposal.valorPago))}</TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={proposal.valorTotal}
+                      onChange={(e) => handleFieldChange(proposal.id, 'valorTotal', e.target.value)}
+                      className="w-24 py-1 px-2 border border-neutral-300 rounded-md bg-neutral-50 text-right focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={proposal.valorPago}
+                      onChange={(e) => handleFieldChange(proposal.id, 'valorPago', e.target.value)}
+                      className="w-24 py-1 px-2 border border-neutral-300 rounded-md bg-neutral-50 text-right focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </TableCell>
                   <TableCell className="text-sm">{formatCurrency(Number(proposal.saldoAberto))}</TableCell>
                   <TableCell>
                     <Input
                       type="number"
                       min="0"
                       max="100"
+                      step="0.1"
                       value={proposal.percentComissao}
-                      onChange={(e) => handlePercentChange(proposal.id, e.target.value)}
+                      onChange={(e) => handleFieldChange(proposal.id, 'percentComissao', e.target.value)}
                       className="w-16 py-1 px-2 border border-neutral-300 rounded-md bg-neutral-50 text-right focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </TableCell>
                   <TableCell className="text-sm">{formatCurrency(Number(proposal.valorComissaoTotal))}</TableCell>
-                  <TableCell className="text-sm">{formatCurrency(Number(proposal.valorComissaoPaga))}</TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={proposal.valorComissaoPaga}
+                      onChange={(e) => handleFieldChange(proposal.id, 'valorComissaoPaga', e.target.value)}
+                      className="w-24 py-1 px-2 border border-neutral-300 rounded-md bg-neutral-50 text-right focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </TableCell>
                   <TableCell className="text-sm">{formatIntegerPercentage(Number(proposal.percentComissaoPaga))}</TableCell>
                   <TableCell>
                     <DropdownMenu>
